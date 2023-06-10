@@ -1,0 +1,31 @@
+name: build
+on:
+  - push
+
+jobs:
+
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - name: setup msys2
+        uses: msys2/setup-msys2@v2
+        with:
+          update: true
+          msystem: MINGW64
+      - name: install dependencies
+        env:
+          PACMAN_OPTIONS: "--needed --noconfirm"
+        run: |
+          curl https://gitlab.com/inkscape/inkscape/-/raw/master/buildtools/msys2installdeps.sh | bash
+      - name: checkout Inkscape repository
+        run: |
+          git clone --recurse-submodule --single-branch --depth 1 https://gitlab.com/inkscape/inkscape.git
+      - name: configure build
+        run: |
+          cmake -Bbuild -Sinkscape -G Ninja
+      - name: compile
+        run: |
+          ninja -C build
