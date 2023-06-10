@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2023 René de Hesselle <dehesselle@web.de>
+#
+# SPDX-License-Identifier: GPL-2.0-or-later
+
 name: build
 on:
   - push
@@ -9,23 +13,38 @@ jobs:
     defaults:
       run:
         shell: msys2 {0}
+    env:
+      CCACHE_DIR: c:/ccache
+      CCACHE_MAXSIZE: "2.0G"
     steps:
-      - name: setup msys2
+      - name: Create cache id
+        id: cache_id
+        uses: josStorer/get-current-time@v2
+        with:
+          format: "YYYY-MM-DD-HH-mm-ss"
+      # Create a new cache, building ontop the most recent old one.
+      - name: Setup cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ccache-${{ steps.cache_id.outputs.formattedTime }}
+          restore-keys: ccache-
+      - name: Setup msys2
         uses: msys2/setup-msys2@v2
         with:
           update: true
           msystem: MINGW64
-      - name: install dependencies
+      - name: Install dependencies
         env:
           PACMAN_OPTIONS: "--needed --noconfirm"
         run: |
           curl https://gitlab.com/inkscape/inkscape/-/raw/master/buildtools/msys2installdeps.sh | bash
-      - name: checkout Inkscape repository
+      - name: Checkout Inkscape repository
         run: |
           git clone --recurse-submodule --single-branch --depth 1 https://gitlab.com/inkscape/inkscape.git
-      - name: configure build
+      - name: Configure
         run: |
-          cmake -Bbuild -Sinkscape -G Ninja
-      - name: compile
+          cmake -Bbuild -Sinkscape -G Ninja -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+      - name: Make
         run: |
           ninja -C build
