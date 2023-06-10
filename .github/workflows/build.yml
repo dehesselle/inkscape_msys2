@@ -48,3 +48,11 @@ jobs:
       - name: Make
         run: |
           ninja -C build
+      - name: Create artifact
+        run: |
+          ninja -C build dist-win-7z-fast
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: inkscape.7z
+          path: build/inkscape*.7z
